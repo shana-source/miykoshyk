@@ -16,10 +16,14 @@
     .store-tab { flex: 1; padding: 8px 4px; border: 1px solid #ddd; border-radius: 8px; font-size: 13px; background: #fff; color: #888; cursor: pointer; text-align: center; user-select: none; }
     .tab-r-on { border-color: #E8700A; background: #FEF0E6; color: #C45E00; font-weight: 500; }
     .tab-b-on { border-color: #1A7A3A; background: #E6F4EC; color: #145E2C; font-weight: 500; }
-    .search-box { display: flex; align-items: center; gap: 8px; background: #fff; border: 1px solid #e5e5e5; border-radius: 8px; padding: 8px 12px; margin-bottom: 1rem; }
+    .search-box { display: flex; align-items: center; gap: 8px; background: #fff; border: 1px solid #e5e5e5; border-radius: 8px; padding: 8px 12px; margin-bottom: 8px; }
     .search-box input { border: none; background: transparent; font-size: 14px; color: #1a1a1a; flex: 1; outline: none; }
+    .cat-filter { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 8px; scrollbar-width: none; }
+    .cat-filter::-webkit-scrollbar { display: none; }
+    .cat-btn { flex-shrink: 0; padding: 4px 10px; border: 1px solid #ddd; border-radius: 20px; font-size: 11px; background: #fff; color: #888; cursor: pointer; white-space: nowrap; }
+    .cat-btn.active { border-color: #1a1a1a; background: #1a1a1a; color: #fff; }
     .section-label { font-size: 12px; color: #888; margin-bottom: 8px; }
-    .product-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 1.25rem; max-height: 260px; overflow-y: auto; }
+    .product-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 1.25rem; max-height: 300px; overflow-y: auto; }
     .product-row { display: flex; gap: 6px; }
     .product-card { flex: 1; padding: 9px 10px; background: #fff; border: 1px solid #e5e5e5; border-radius: 8px; display: flex; align-items: center; justify-content: space-between; min-width: 0; }
     .product-card.card-r { border-left: 2.5px solid #E8700A; }
@@ -29,6 +33,7 @@
     .badge-r { background: #FEF0E6; color: #C45E00; }
     .badge-b { background: #E6F4EC; color: #145E2C; }
     .pc-name { font-size: 12px; color: #1a1a1a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .pc-cat { font-size: 10px; color: #aaa; margin-top: 1px; }
     .pc-price { font-size: 12px; color: #888; margin-top: 2px; }
     .pc-price.cheaper { font-weight: 500; color: #1a1a1a; }
     .arrow-r { color: #C45E00; }
@@ -65,6 +70,7 @@
     <i class="ti ti-search" style="color:#aaa;font-size:16px;"></i>
     <input type="text" placeholder="Пошук товару..." id="searchInput" oninput="renderProducts()" />
   </div>
+  <div class="cat-filter" id="catFilter"></div>
   <p class="section-label">Товари</p>
   <div class="product-list" id="productList"></div>
   <div id="basketR"></div>
@@ -72,13 +78,68 @@
 </div>
 
 <script>
-const prices = {
-  r:{"Молоко 2.5%, 1л":38,"Хліб білий":22,"Яйця С1, 10шт":65,"Масло вершкове 200г":89,"Сир твердий 200г":72,"Куряче філе 1кг":185,"Картопля 1кг":18,"Цибуля 1кг":22,"Морква 1кг":24,"Гречка 1кг":55,"Макарони 400г":28,"Олія соняшникова 1л":68,"Сметана 20%, 400г":52,"Кефір 1%, 1л":34,"Банани 1кг":42},
-  b:{"Молоко 2.5%, 1л":36,"Хліб білий":20,"Яйця С1, 10шт":63,"Масло вершкове 200г":92,"Сир твердий 200г":75,"Куряче філе 1кг":179,"Картопля 1кг":16,"Цибуля 1кг":20,"Морква 1кг":22,"Гречка 1кг":52,"Макарони 400г":26,"Олія соняшникова 1л":65,"Сметана 20%, 400г":49,"Кефір 1%, 1л":32,"Банани 1кг":45}
-};
-const allProducts = Object.keys(prices.r);
+const catalog = [
+  {name:"Бобові або цз макарони", cat:"Бобові та зернові", r:45, b:42},
+  {name:"Горіхи мікс", cat:"Бобові та зернові", r:120, b:115},
+  {name:"Мікс насіння", cat:"Бобові та зернові", r:65, b:62},
+  {name:"Нут консервований", cat:"Бобові та зернові", r:48, b:45},
+  {name:"Вівсянка плющена", cat:"Бобові та зернові", r:38, b:35},
+  {name:"Кус-кус", cat:"Бобові та зернові", r:52, b:49},
+  {name:"Цз лаваш", cat:"Бобові та зернові", r:32, b:30},
+  {name:"М'ясо курки", cat:"М'ясо та риба", r:185, b:179},
+  {name:"Фарш яловичина-свинина", cat:"М'ясо та риба", r:210, b:198},
+  {name:"Філе стегна", cat:"М'ясо та риба", r:175, b:168},
+  {name:"Авокадо", cat:"Овочі та фрукти", r:55, b:58},
+  {name:"Буряк варений", cat:"Овочі та фрукти", r:28, b:25},
+  {name:"Картопля 1кг", cat:"Овочі та фрукти", r:18, b:16},
+  {name:"Кріп", cat:"Овочі та фрукти", r:12, b:10},
+  {name:"Кукурудза консервована", cat:"Овочі та фрукти", r:38, b:35},
+  {name:"Морква 1кг", cat:"Овочі та фрукти", r:24, b:22},
+  {name:"Огірок 1кг", cat:"Овочі та фрукти", r:45, b:42},
+  {name:"Пекінська капуста", cat:"Овочі та фрукти", r:38, b:35},
+  {name:"Перець червоний 1кг", cat:"Овочі та фрукти", r:72, b:68},
+  {name:"Петрушка, м'ята", cat:"Овочі та фрукти", r:14, b:12},
+  {name:"Редис", cat:"Овочі та фрукти", r:22, b:20},
+  {name:"Рукола", cat:"Овочі та фрукти", r:35, b:38},
+  {name:"Цибуля 1кг", cat:"Овочі та фрукти", r:22, b:20},
+  {name:"Цибуля синя", cat:"Овочі та фрукти", r:35, b:32},
+  {name:"Цукіні", cat:"Овочі та фрукти", r:42, b:38},
+  {name:"Яблуко 1кг", cat:"Овочі та фрукти", r:48, b:45},
+  {name:"Ягоди", cat:"Овочі та фрукти", r:85, b:92},
+  {name:"Банани 1кг", cat:"Овочі та фрукти", r:42, b:45},
+  {name:"Йогурт грецький 2%", cat:"Яйця та молочка", r:68, b:65},
+  {name:"Моцарела лайт", cat:"Яйця та молочка", r:75, b:72},
+  {name:"Сир котедж", cat:"Яйця та молочка", r:62, b:58},
+  {name:"Фета", cat:"Яйця та молочка", r:82, b:78},
+  {name:"Яйця С1, 10шт", cat:"Яйця та молочка", r:65, b:63},
+  {name:"Молоко 2.5%, 1л", cat:"Яйця та молочка", r:38, b:36},
+  {name:"Сметана 20%, 400г", cat:"Яйця та молочка", r:52, b:49},
+  {name:"Лимон", cat:"Приправи та спеції", r:18, b:16},
+  {name:"Мед", cat:"Приправи та спеції", r:95, b:105},
+  {name:"Оливки", cat:"Приправи та спеції", r:65, b:62},
+  {name:"Оливкова олія", cat:"Приправи та спеції", r:185, b:178},
+  {name:"Олія кокосова", cat:"Приправи та спеції", r:145, b:155},
+  {name:"Орегано, тим'ян, часник, чилі", cat:"Приправи та спеції", r:28, b:25},
+  {name:"Сухарі панірувальні", cat:"Приправи та спеції", r:32, b:30},
+  {name:"Тахіні", cat:"Приправи та спеції", r:95, b:102},
+];
+
+const cats = ['Всі', ...new Set(catalog.map(p => p.cat))];
+let activeCat = 'Всі';
 let active = new Set(['r']);
 let baskets = {r:{}, b:{}};
+
+function buildCatFilter() {
+  document.getElementById('catFilter').innerHTML = cats.map(c =>
+    `<button class="cat-btn${c===activeCat?' active':''}" onclick="selectCat('${c}')">${c}</button>`
+  ).join('');
+}
+
+function selectCat(c) {
+  activeCat = c;
+  buildCatFilter();
+  renderProducts();
+}
 
 function toggle(s) {
   if (active.has(s)) { if (active.size === 1) return; active.delete(s); }
@@ -90,43 +151,45 @@ function toggle(s) {
 
 function renderProducts() {
   const q = document.getElementById('searchInput').value.toLowerCase();
-  const filtered = allProducts.filter(n => n.toLowerCase().includes(q));
+  const filtered = catalog.filter(p =>
+    p.name.toLowerCase().includes(q) &&
+    (activeCat === 'Всі' || p.cat === activeCat)
+  );
   const both = active.has('r') && active.has('b');
   if (both) {
-    document.getElementById('productList').innerHTML = filtered.map(name => {
-      const pr = prices.r[name], pb = prices.b[name];
-      const rCheaper = pr < pb, bCheaper = pb < pr;
+    document.getElementById('productList').innerHTML = filtered.map(p => {
+      const rCheaper = p.r < p.b, bCheaper = p.b < p.r;
       return `<div class="product-row">
         <div class="product-card card-r">
           <div class="pc-left">
             <span class="badge badge-r">Р</span>
-            <div class="pc-name">${name}</div>
-            <div class="pc-price${rCheaper?' cheaper':''}">${pr} ₴${rCheaper?'<span class="arrow-r"> ↓</span>':''}</div>
+            <div class="pc-name">${p.name}</div>
+            <div class="pc-price${rCheaper?' cheaper':''}">${p.r} ₴${rCheaper?'<span class="arrow-r"> ↓</span>':''}</div>
           </div>
-          <button class="add-btn" onclick="addItem('r','${name}')">+</button>
+          <button class="add-btn" onclick="addItem('r','${p.name}')">+</button>
         </div>
         <div class="product-card card-b">
           <div class="pc-left">
             <span class="badge badge-b">Б</span>
-            <div class="pc-name">${name}</div>
-            <div class="pc-price${bCheaper?' cheaper':''}">${pb} ₴${bCheaper?'<span class="arrow-b"> ↓</span>':''}</div>
+            <div class="pc-name">${p.name}</div>
+            <div class="pc-price${bCheaper?' cheaper':''}">${p.b} ₴${bCheaper?'<span class="arrow-b"> ↓</span>':''}</div>
           </div>
-          <button class="add-btn" onclick="addItem('b','${name}')">+</button>
+          <button class="add-btn" onclick="addItem('b','${p.name}')">+</button>
         </div>
       </div>`;
     }).join('');
   } else {
     const s = active.has('r') ? 'r' : 'b';
-    const bc = s==='r'?'badge-r':'badge-b', cc = s==='r'?'card-r':'card-b', l = s==='r'?'Р':'Б';
-    document.getElementById('productList').innerHTML = filtered.map(name => `
+    const bc = s==='r'?'badge-r':'badge-b', cc=s==='r'?'card-r':'card-b', l=s==='r'?'Р':'Б';
+    document.getElementById('productList').innerHTML = filtered.map(p => `
       <div class="product-row">
         <div class="product-card ${cc}" style="flex:1;">
           <div class="pc-left">
             <span class="badge ${bc}">${l}</span>
-            <div class="pc-name">${name}</div>
-            <div class="pc-price">${prices[s][name]} ₴</div>
+            <div class="pc-name">${p.name}</div>
+            <div class="pc-price">${p[s]} ₴</div>
           </div>
-          <button class="add-btn" onclick="addItem('${s}','${name}')">+</button>
+          <button class="add-btn" onclick="addItem('${s}','${p.name}')">+</button>
         </div>
       </div>`).join('');
   }
@@ -149,10 +212,11 @@ function renderOneBasket(s) {
   const tc = s==='r' ? 't-r' : 't-b';
   const items = Object.keys(baskets[s]);
   let total = 0;
+  const p = (name) => catalog.find(p => p.name === name)?.[s] || 0;
   const rows = items.length === 0
     ? '<p class="basket-empty">Список порожній</p>'
     : items.map(name => {
-        const sum = prices[s][name] * baskets[s][name];
+        const sum = p(name) * baskets[s][name];
         total += sum;
         return `<div class="basket-item">
           <span class="bi-name">${name}</span>
@@ -179,6 +243,7 @@ function renderBaskets() {
 }
 
 function render() { renderProducts(); renderBaskets(); }
+buildCatFilter();
 render();
 
 if (window.Telegram?.WebApp) {
